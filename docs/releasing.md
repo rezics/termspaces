@@ -4,28 +4,31 @@ The package is prepared as `@rezics/termspaces` with command `termspaces`.
 The npm scope must be owned or publishable by the maintainer; absence from the
 registry does not establish account permission. npm publication is manual.
 
-Before publishing:
+From the repository root, install the locked development dependencies once:
 
 ```sh
 task install
-task check
-task test
-task docs:check
-task pack
 ```
 
-Inspect the tarball in `.temp/`. It should contain compiled JavaScript and
-declarations, the tmux preset, JSON Schema, Agent Skill, linked documentation,
-README and license.
-It must exclude reference clones, test data, credentials and source checkouts.
-Install that tarball into a fresh prefix and check its `termspaces` command.
-
-The maintainer then runs, with npm credentials and any required verification:
+Then publish directly, with npm credentials and any required verification:
 
 ```sh
-npm publish .temp/rezics-termspaces-0.1.0.tgz --access public
+npm publish
 ```
 
-Publish the verified tarball so the uploaded bytes match the package that was
-tested. After publication, update the README's availability note and tag the
-released commit. No CI workflow in this repository publishes to npm.
+`publishConfig.access` already selects public access. The `prepublishOnly` hook
+runs `task release:check` (types, tests and documentation links). The `prepack`
+hook runs `task build`, so missing or stale compiled output is rebuilt before
+packaging. Both hooks use npm's [standard publishing lifecycle](https://docs.npmjs.com/cli/v11/using-npm/scripts/#npm-publish).
+
+Use `task publish:dry-run` to exercise that same path without uploading. Use
+`task package:smoke` to pack and install into an isolated prefix, then exercise
+the shipped CLI. Tarballs are retained in `.temp/` as optional release artifacts;
+publishing one explicitly is also supported.
+
+The package contains compiled JavaScript and declarations, the tmux preset,
+JSON Schema, Agent Skill, linked documentation, README and license. It excludes
+reference clones, test data and source checkouts.
+
+After publication, update the README's availability note and tag the released
+commit. No CI workflow in this repository publishes to npm.

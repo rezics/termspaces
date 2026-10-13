@@ -48,3 +48,7 @@ process per managed pane. Large-workspace memory use has not been benchmarked.
 Temporary checkouts, test data and npm tarballs live under ignored `.temp/`.
 The generated schema is committed; `task build` regenerates it from TypeBox.
 CI installs the same locked dependencies and tests Node.js and tmux releases.
+
+`npm publish` invokes `task release:check` through `prepublishOnly`, then builds
+through `prepack`. `npm pack` also builds through `prepack`. Run
+`task publish:dry-run` to verify the direct publication path without uploading.

@@ -21,8 +21,18 @@ tasks:
     cmds: ['node --test {{.CLI_ARGS | default "test/*.test.mjs"}}']
   pack:
     desc: Build and prepare an npm tarball without publishing.
-    deps: [build]
     cmds: [mkdir -p .temp, npm pack --pack-destination .temp]
+  release:check:
+    desc: Run the checks required by npm publish.
+    cmds:
+      - task: check
+      - task: test
+      - task: docs:check
+  publish:dry-run:
+    desc: Exercise npm publish hooks and packaging without uploading.
+    env:
+      npm_config_cache: '{{.ROOT_DIR}}/.temp/npm-cache'
+    cmds: [npm publish --dry-run]
   test:systemd:
     desc: Exercise generated units against the current user manager on isolated names.
     deps: [build]
