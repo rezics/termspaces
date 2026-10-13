@@ -142,5 +142,5 @@ program.parseAsync().catch(error => {
   const payload = { code, message, ...(error instanceof ToolError && error.details !== undefined ? { details: error.details } : {}) };
   if (process.argv.includes('--json')) process.stdout.write(JSON.stringify({ protocolVersion: 1, ok: false, error: payload }) + '\n');
   else process.stderr.write(`${code}: ${message}\n`);
-  process.exitCode = code === 'CONFLICT' ? 3 : /INVALID|CONFIG|DUPLICATE|CONFIRMATION/.test(code) ? 2 : 1;
+  process.exitCode = code === 'CONFLICT' ? 3 : /INVALID|CONFIG|DUPLICATE|CONFIRMATION|AMBIGUOUS/.test(code) ? 2 : 1;
 });

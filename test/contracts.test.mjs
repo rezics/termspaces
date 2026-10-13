@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fixture } from './helpers.mjs';
 import { expandPath, loadConfig } from '../dist/config.js';
-import { encodeTmuxArg, literalFormat, renameExpandsFormats } from '../dist/tmux.js';
+import { encodeTmuxArg, literalFormat } from '../dist/tmux.js';
 import { plan } from '../dist/planner.js';
 import { unitArg } from '../dist/systemd.js';
 
@@ -30,8 +30,6 @@ test('tmux and systemd encoding boundaries are explicit', () => {
   assert.equal(encodeTmuxArg('semi;'), 'semi\\;');
   assert.equal(encodeTmuxArg('backslash\\;'), 'backslash\\\\;');
   assert.equal(literalFormat('#{pid} #(echo x)'), '##{pid} ##(echo x)');
-  for (const version of ['tmux 3.3a', 'tmux 3.4', 'tmux 3.5a']) assert.equal(renameExpandsFormats(version), false);
-  for (const version of ['tmux 3.6', 'tmux 3.7c', 'tmux 4.0']) assert.equal(renameExpandsFormats(version), true);
   assert.equal(unitArg('a %b $c "d"'), '"a %%b $$c \\"d\\""');
 });
 test('pending startup with drift is retained, never activated; duplicates conflict', async t => {

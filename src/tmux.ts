@@ -21,11 +21,6 @@ export function canonicalPath(input: string): string {
     }
   }
 }
-export const renameExpandsFormats = (version: string): boolean => {
-  const match = /tmux (\d+)\.(\d+)/.exec(version);
-  if (!match) throw new ToolError('UNSUPPORTED_TMUX', `Unrecognized tmux version: ${version}`);
-  return Number(match[1]) > 3 || (Number(match[1]) === 3 && Number(match[2]) >= 6);
-};
 export async function run(binary: string, args: string[], timeout = 10000): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
@@ -58,7 +53,7 @@ export class Tmux {
     return server.code === 0 && server.stdout.trim() ? `tmux ${server.stdout.trim()}` : (await run('tmux', ['-V'])).stdout.trim();
   }
   async renameValue(name: string): Promise<string> {
-    return renameExpandsFormats(await this.getVersion()) ? literalFormat(name) : name;
+    return literalFormat(name);
   }
   async call(args: string[], allowFailure = false): Promise<string> {
     const result = await run('tmux', ['-S', this.socket, ...args.map(encodeTmuxArg)]);

@@ -6,7 +6,7 @@
 | TypeScript | 5.9.3 | Compile ESM JavaScript and declarations |
 | Yarn Classic | 1.22.22 | Install locked dependencies only |
 | Task | 3.53.1 locally; Task 3 | Development entry points |
-| tmux | 3.3+; local 3.7c | Terminal execution; rename format semantics change in 3.6 |
+| tmux | 3.3+; local 3.7c | Terminal execution; literal encoding is checked against actual release builds |
 | util-linux flock | Linux open-file-description advisory locks | Serialize writers and release on process death |
 | TypeBox | 0.34.52 | Configuration type and generated schema |
 | Ajv | 8.20.0 | Runtime JSON Schema validation |

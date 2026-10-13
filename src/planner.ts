@@ -29,7 +29,8 @@ export function plan(desired: DesiredSession[], actual: Snapshot): Plan {
         continue;
       }
       if (aw.name !== window.name) result.operations.push({ kind: 'rename-window', target, runtimeId: aw.runtimeId });
-      if (!aw.initialized) result.operations.push({ kind: 'initialize-window', target, runtimeId: aw.runtimeId });
+      if (!aw.initialized && aw.panes.some(p => !p.owned)) conflict(target, 'Uninitialized window contains unmanaged panes; initialization would change their layout.');
+      else if (!aw.initialized) result.operations.push({ kind: 'initialize-window', target, runtimeId: aw.runtimeId });
       else if (aw.layout !== window.layout) deferred(target, 'Layout changed; run layout explicitly.');
       for (const pane of window.panes) {
         const ptarget = `${target}/${pane.id}`;

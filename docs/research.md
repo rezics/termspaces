@@ -48,6 +48,83 @@ semantics in every version.
 [tests](https://github.com/joshmedeski/sesh/blob/628bf249c3185ee4e7d5fea2076b378ca5e874d3/tmux/new_win_test.go),
 [renamer](https://github.com/joshmedeski/sesh/blob/628bf249c3185ee4e7d5fea2076b378ca5e874d3/tmux/rename.go).
 
+## Window startup placement and ordering
+
+The source checkouts provide related patterns, with different trigger scopes:
+
+- **tmuxinator:** a simple `windows: [{server: "bundle exec rails s"}]` entry
+  runs shell text in the new window's initial pane. `pre_window` applies to every
+  pane, despite its name; a window's `pre` is likewise sent before each pane's
+  own commands. The template creates windows first, then sends pane commands
+  while constructing splits, and applies the final window layout afterward.
+  Project hooks have broader scope: `on_project_start` runs before the
+  existing-session branch, and `on_project_first_start` runs before new-session
+  creation. These are shell-script/text mechanisms, not executable argv arrays.
+  [Window docs](https://github.com/tmuxinator/tmuxinator/blob/d380a341b709ea7c4229a5b4e8b50ed972af302b/README.md#Windows),
+  [command builder](https://github.com/tmuxinator/tmuxinator/blob/d380a341b709ea7c4229a5b4e8b50ed972af302b/lib/tmuxinator/window.rb),
+  [ordering](https://github.com/tmuxinator/tmuxinator/blob/d380a341b709ea7c4229a5b4e8b50ed972af302b/lib/tmuxinator/assets/template.erb).
+- **tmuxp:** window-level `shell_command_before` is inherited by **every pane**.
+  The loader concatenates session-before, window-before, pane-before, and pane
+  commands in that order. The classic builder sends shell text into each pane
+  while constructing it. Its Python plugin callback `on_window_create` runs
+  before pane construction; `after_window_finished` runs afterward. The latter
+  is a useful ordering precedent, but is not a built-in YAML command executed
+  once per window. `before_script` is a workspace-level subprocess before
+  configured window construction, rather than a window-startup command.
+  [Inheritance](https://github.com/tmux-python/tmuxp/blob/fa1bd94fb22a54b9f7820ba5e3621cf2d93d603b/src/tmuxp/workspace/loader.py#L198),
+  [builder hooks](https://github.com/tmux-python/tmuxp/blob/fa1bd94fb22a54b9f7820ba5e3621cf2d93d603b/src/tmuxp/workspace/builder/classic.py).
+- **sesh:** the documented `[[window]].startup_script = "git pull"` is shell
+  text sent immediately after new-window creation. Session startup follows the
+  configured-window loop. Its separate `window connect --command` path passes
+  one shell-command string to tmux on creation, but sends keystrokes to an
+  existing window on reuse. This last behavior is intentional in sesh and would
+  violate termspaces' non-replay contract if copied into ordinary apply.
+  [Window docs](https://github.com/joshmedeski/sesh/blob/628bf249c3185ee4e7d5fea2076b378ca5e874d3/README.md#multiple-windows),
+  [startup ordering](https://github.com/joshmedeski/sesh/blob/628bf249c3185ee4e7d5fea2076b378ca5e874d3/startup/startup.go),
+  [create/reuse distinction](https://github.com/joshmedeski/sesh/blob/628bf249c3185ee4e7d5fea2076b378ca5e874d3/connector/connect_window.go).
+
+**Recommended termspaces contract:** `windows[].startup` with `mode: on-create`
+and `argv` means one startup attempt in that newly created window's first
+declared pane. It is an ergonomic declaration at window scope, not an external
+callback process and not a command inherited by all panes. It uses that pane's
+effective cwd and configured shell for the subsequent interactive prompt. Reject
+an explicit first-pane startup when window startup would also control that pane.
+Preserve literal argv; users request shell parsing explicitly with an executable
+such as `/bin/sh` and arguments `-c`, `script text`.
+
+Bind this startup only when creating a **window generation**, including the
+first window of a new session. Repeated apply, attachment, sticky-shell restart,
+and recreation of a missing first pane in an existing window do not trigger it.
+Adding or changing window startup on an existing window reports deferred drift.
+Explicit reset or recreation of an absent window creates a new generation and
+can run the declaration again. Keep the command's origin separate from pane
+defaults so ordinary missing-pane reconciliation cannot accidentally rebind it.
+
+Release all of the window's pending runners only after its declared panes,
+ownership metadata, and initial layout are initialized. Persist that completion
+barrier so recovery from a partial create finishes structure before releasing
+the first-pane command. Do not wait for the startup task to finish: long-running
+servers are valid. There is no implied readiness or completion ordering between
+different panes' tasks or between different windows. This combines the useful
+placement and hook-ordering precedents above with termspaces' stricter recovery
+and non-replay requirements; it is not a claim that upstream tools share the
+same lifecycle contract.
+
+Validation should prove the trigger distinctions above, reject conflicting
+first-pane declarations, preserve argv metacharacters literally, and interrupt
+creation before the final split/layout. On recovery the startup task must observe
+the complete declared pane set and initial layout, while its external side
+effect occurs at most once per window generation.
+
+Targeted implementation validation passed with local tmux 3.7c:
+`task exec -- node --test test/window-recovery.test.mjs` ran three real-tmux cases.
+They cover interruption before the first split, interruption after the initialized
+marker but before runner release, and an unmanaged pane inserted before initial
+layout completion. Startup observed all three declared panes in the expected
+horizontal layout with the completion marker set; recovery retained existing
+pane IDs and ran the startup once. The unmanaged-pane case retained the manual
+layout and kept pending startup commands unreleased.
+
 ## tmux boundaries that affect correctness
 
 ### Argument arrays are necessary, but insufficient
@@ -71,18 +148,23 @@ Do not globally double `#` for every argument.
 [new-session](https://github.com/tmux/tmux/blob/3.5a/cmd-new-session.c),
 [rename-window](https://github.com/tmux/tmux/blob/3.5a/cmd-rename-window.c).
 
-**Exact release boundary:** `rename-session` and `rename-window` both started
-format expansion in **tmux 3.6**. tmux 3.5a passes the name directly; the 3.6
-tagged implementation calls `format_single_from_target` in both commands.
-Supporting common distro versions therefore needs raw literal rename names for
-3.3–3.5 and doubled `#` for 3.6+. Always escaping would introduce unwanted extra
-`#` characters on old releases. Validate both branches with names containing
-`#{pid}`, `#(touch SENTINEL)`, and ordinary `#`. Gate using the running server's
-`#{version}` when it exists, rather than only the installed client's `tmux -V`:
-an executable upgrade does not itself replace the long-lived server.
-[3.5a session rename](https://github.com/tmux/tmux/blob/3.5a/cmd-rename-session.c),
-[3.6 session rename](https://github.com/tmux/tmux/blob/3.6/cmd-rename-session.c#L48),
-[3.6 window rename](https://github.com/tmux/tmux/blob/3.6/cmd-rename-window.c#L48).
+**Verified compatibility:** direct fetches of the tagged sources confirm that
+`rename-session` and `rename-window` call `format_single_from_target` in every
+supported release checked: **3.3a, 3.5a, and 3.7c**. Creation names and working
+directories also undergo format expansion in these releases. Double literal
+`#` in both creation and rename names throughout the supported 3.3+ range; no
+rename version gate is needed. Validate names containing `#{pid}`,
+`#(touch SENTINEL)`, and ordinary `#` against real binaries. For dependency
+reporting, query the running server's `#{version}` when present, since an
+executable upgrade does not itself replace the long-lived server.
+[3.3a session rename](https://github.com/tmux/tmux/blob/3.3a/cmd-rename-session.c),
+[3.3a window rename](https://github.com/tmux/tmux/blob/3.3a/cmd-rename-window.c),
+[3.5a window rename](https://github.com/tmux/tmux/blob/3.5a/cmd-rename-window.c),
+[3.7c window rename](https://github.com/tmux/tmux/blob/3.7c/cmd-rename-window.c).
+
+Evidence correction: actual tagged source contents supersede the earlier
+release-boundary inference; compatibility claims must be checked by the real
+tmux matrix as well as source inspection.
 
 `select-pane -T` also expands formats. Encode literal titles there. Option values
 should stay literal; do not enable `set-option -F` for ownership or state data.
