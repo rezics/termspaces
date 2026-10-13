@@ -12,8 +12,8 @@ export class ToolError extends Error {
 const validate = new Ajv({ allErrors: true, strict: false }).compile<Workspace>(WorkspaceSchema);
 export type PaneSpec = { cwd: string; shell: string; sticky: boolean; argv: string[] | null; startupScope: 'pane' | 'window' };
 export type DesiredPane = { id: string; spec: PaneSpec };
-export type DesiredWindow = { id: string; name: string; layout: string; panes: DesiredPane[] };
-export type DesiredSession = { id: string; name: string; profile: 'minimal' | 'immersive'; autostart: boolean; windows: DesiredWindow[]; source: string };
+export type DesiredWindow = { id: string; name: string; description?: string; layout: string; panes: DesiredPane[] };
+export type DesiredSession = { id: string; name: string; description?: string; profile: 'minimal' | 'immersive'; autostart: boolean; windows: DesiredWindow[]; source: string };
 export const configHome = () => join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'termspaces');
 export const stateHome = () => join(process.env.XDG_STATE_HOME || join(homedir(), '.local/state'), 'termspaces');
 export const defaultConfig = () => join(configHome(), 'workspaces');
@@ -64,9 +64,9 @@ export async function loadConfig(path = defaultConfig(), checkPaths = true): Pro
         }
         panes.push({ id: p.id, spec: { cwd: paneCwd, shell, sticky: p.sticky ?? true, argv: startup?.mode === 'on-create' ? startup.argv : null, startupScope: windowStartup ? 'window' : 'pane' } });
       }
-      windows.push({ id: w.id, name: w.name || w.id, layout: w.layout || 'tiled', panes });
+      windows.push({ id: w.id, name: w.name || w.id, description: w.description ?? '', layout: w.layout || 'tiled', panes });
     }
-    sessions.push({ id: value.session.id, name: value.session.name || value.session.id, profile: value.session.profile || 'minimal', autostart: value.session.autostart ?? false, windows, source: file });
+    sessions.push({ id: value.session.id, name: value.session.name || value.session.id, description: value.session.description ?? '', profile: value.session.profile || 'minimal', autostart: value.session.autostart ?? false, windows, source: file });
   }
   unique(sessions.map(s => s.id), 'sessions');
   unique(sessions.map(s => s.name), 'session names');

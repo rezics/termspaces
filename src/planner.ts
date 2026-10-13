@@ -1,7 +1,7 @@
 import type { DesiredSession } from './config.js';
 import type { Snapshot } from './state.js';
 
-export type Operation = { kind: 'create-session' | 'create-window' | 'create-pane' | 'rename-session' | 'rename-window' | 'profile' | 'activate' | 'initialize-window'; target: string; runtimeId?: string };
+export type Operation = { kind: 'create-session' | 'create-window' | 'create-pane' | 'rename-session' | 'rename-window' | 'session-description' | 'window-description' | 'profile' | 'activate' | 'initialize-window'; target: string; runtimeId?: string; value?: string };
 export type Difference = { target: string; reason: string };
 export type Plan = { operations: Operation[]; deferred: Difference[]; conflicts: Difference[] };
 export function plan(desired: DesiredSession[], actual: Snapshot): Plan {
@@ -17,6 +17,7 @@ export function plan(desired: DesiredSession[], actual: Snapshot): Plan {
     if (actual.sessions.some(s => s.name === session.name && s !== a)) { conflict(session.id, 'Session display name belongs to another resource.'); continue; }
     if (!a) { result.operations.push({ kind: 'create-session', target: session.id }); continue; }
     if (a.name !== session.name) result.operations.push({ kind: 'rename-session', target: session.id, runtimeId: a.runtimeId });
+    if ((a.description ?? '') !== (session.description ?? '')) result.operations.push({ kind: 'session-description', target: session.id, runtimeId: a.runtimeId, value: session.description ?? '' });
     if (a.profile !== session.profile) result.operations.push({ kind: 'profile', target: session.id, runtimeId: a.runtimeId });
     for (const window of session.windows) {
       const target = `${session.id}/${window.id}`;
@@ -29,6 +30,7 @@ export function plan(desired: DesiredSession[], actual: Snapshot): Plan {
         continue;
       }
       if (aw.name !== window.name) result.operations.push({ kind: 'rename-window', target, runtimeId: aw.runtimeId });
+      if ((aw.description ?? '') !== (window.description ?? '')) result.operations.push({ kind: 'window-description', target, runtimeId: aw.runtimeId, value: window.description ?? '' });
       if (!aw.initialized && aw.panes.some(p => !p.owned)) conflict(target, 'Uninitialized window contains unmanaged panes; initialization would change their layout.');
       else if (!aw.initialized) result.operations.push({ kind: 'initialize-window', target, runtimeId: aw.runtimeId });
       else if (aw.layout !== window.layout) deferred(target, 'Layout changed; run layout explicitly.');

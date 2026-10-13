@@ -13,7 +13,8 @@ import { inspect } from './state.js';
 import { plan } from './planner.js';
 import { autostart } from './systemd.js';
 
-const program = new Command().name('termspaces').description('Declarative tmux workspaces for humans and coding agents').version('0.1.0')
+const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+const program = new Command().name('termspaces').description('Declarative tmux workspaces for humans and coding agents').version(version)
   .option('-c, --config <path>', 'Workspace YAML file or directory', defaultConfig())
   .option('--socket <name>', 'Private tmux socket name', 'termspaces')
   .option('--socket-path <path>', 'Explicit absolute tmux socket path (for service integration)')

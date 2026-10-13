@@ -6,6 +6,11 @@ import { resolve } from 'node:path';
 const id = Type.String({ pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$' });
 const text = Type.String({ minLength: 1, maxLength: 4096, pattern: '^[^\\u0000-\\u001f\\u007f]+$' });
 const object = { additionalProperties: false } as const;
+const description = Type.Optional(Type.String({
+  maxLength: 4096,
+  pattern: '^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f]*$',
+  description: 'Intended purpose for people and agents. Supports multiline text; does not execute commands or describe current task state.',
+}));
 const startup = Type.Union([
   Type.Object({ mode: Type.Literal('manual') }, object),
   Type.Object({ mode: Type.Literal('on-create'), argv: Type.Array(Type.String({ pattern: '^[^\\u0000]*$' }), { minItems: 1 }) }, object),
@@ -14,11 +19,13 @@ export const WorkspaceSchema = Type.Object({
   version: Type.Literal(1),
   session: Type.Object({
     id, name: Type.Optional(Type.String({ minLength: 1, maxLength: 128, pattern: '^[^.:\\u0000-\\u001f\\u007f]+$' })),
+    description,
     cwd: text, autostart: Type.Optional(Type.Boolean()),
     profile: Type.Optional(Type.Union([Type.Literal('minimal'), Type.Literal('immersive')])),
   }, object),
   windows: Type.Array(Type.Object({
     id, name: Type.Optional(text), cwd: Type.Optional(text),
+    description,
     startup: Type.Optional(startup),
     layout: Type.Optional(Type.Union([Type.Literal('even-horizontal'), Type.Literal('even-vertical'), Type.Literal('main-horizontal'), Type.Literal('main-vertical'), Type.Literal('tiled')])),
     panes: Type.Array(Type.Object({

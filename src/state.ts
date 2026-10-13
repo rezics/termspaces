@@ -3,8 +3,8 @@ import { LAUNCH_PREFIX } from './runner.js';
 import type { PaneSpec } from './config.js';
 
 export type ActualPane = { runtimeId: string; id: string; owned: boolean; spec: PaneSpec | null; state: string; token: string; dead: boolean; lastExit: unknown; shellExit: unknown; command: string; cwd: string; orphanLauncher: boolean };
-export type ActualWindow = { runtimeId: string; id: string; owned: boolean; name: string; layout: string; initialized: boolean; panes: ActualPane[] };
-export type ActualSession = { runtimeId: string; id: string; owned: boolean; name: string; profile: string; windows: ActualWindow[] };
+export type ActualWindow = { runtimeId: string; id: string; owned: boolean; name: string; description: string; layout: string; initialized: boolean; panes: ActualPane[] };
+export type ActualSession = { runtimeId: string; id: string; owned: boolean; name: string; description: string; profile: string; windows: ActualWindow[] };
 export type Snapshot = { generation: string; sessions: ActualSession[] };
 const rows = (s: string): string[][] => s ? s.split('\n').map(r => r.split('\t')) : [];
 function decode(s: string): PaneSpec | null { try { return JSON.parse(Buffer.from(s, 'base64url').toString()) as PaneSpec; } catch { return null; } }
@@ -14,18 +14,20 @@ export async function inspect(tmux: Tmux): Promise<Snapshot> {
   const generation = await tmux.call(['show-options', '-s', '-qv', '@ts-generation']);
   const sessions: ActualSession[] = [];
   for (const [runtimeId = ''] of rows(await tmux.call(['list-sessions', '-F', '#{session_id}']))) {
-    const [id, owner, name, profile] = await Promise.all([
+    const [id, owner, name, profile, description] = await Promise.all([
       tmux.ownOption('s', runtimeId, '@ts-session-id'), tmux.ownOption('s', runtimeId, '@ts-session-owner'),
       tmux.call(['display-message', '-p', '-t', runtimeId, '#{session_name}']), tmux.ownOption('s', runtimeId, '@ts-profile'),
+      tmux.ownOption('s', runtimeId, '@ts-session-description'),
     ]);
-    const session: ActualSession = { runtimeId, id, owned: owner === OWNER, name, profile, windows: [] };
+    const session: ActualSession = { runtimeId, id, owned: owner === OWNER, name, description, profile, windows: [] };
     for (const [wid = ''] of rows(await tmux.call(['list-windows', '-t', runtimeId, '-F', '#{window_id}']))) {
-      const [logicalId, wowner, name, layout, initialized] = await Promise.all([
+      const [logicalId, wowner, name, layout, initialized, description] = await Promise.all([
         tmux.ownOption('w', wid, '@ts-window-id'), tmux.ownOption('w', wid, '@ts-window-owner'),
         tmux.call(['display-message', '-p', '-t', wid, '#{window_name}']), tmux.ownOption('w', wid, '@ts-layout'),
         tmux.ownOption('w', wid, '@ts-initialized'),
+        tmux.ownOption('w', wid, '@ts-window-description'),
       ]);
-      const window: ActualWindow = { runtimeId: wid, id: logicalId, owned: wowner === OWNER, name, layout, initialized: initialized === '1', panes: [] };
+      const window: ActualWindow = { runtimeId: wid, id: logicalId, owned: wowner === OWNER, name, description, layout, initialized: initialized === '1', panes: [] };
       for (const [pid = ''] of rows(await tmux.call(['list-panes', '-t', wid, '-F', '#{pane_id}']))) {
         // Read the object's own options: format lookups would inherit parent tags.
         const [pLogical, pOwner, spec, state, token, dead, lastExit, shellExit, command, cwd] = await Promise.all([

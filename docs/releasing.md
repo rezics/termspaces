@@ -30,5 +30,5 @@ The package contains compiled JavaScript and declarations, the tmux preset,
 JSON Schema, Agent Skill, linked documentation, README and license. It excludes
 reference clones, test data and source checkouts.
 
-After publication, update the README's availability note and tag the released
-commit. No CI workflow in this repository publishes to npm.
+After publication, tag the released commit. No CI workflow in this repository
+publishes to npm.

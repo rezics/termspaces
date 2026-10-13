@@ -29,6 +29,11 @@ export class Manager {
     if (pane.dead || pane.state !== 'pending' || !pane.token) throw new ToolError('LAUNCH_STATE_CHANGED', 'Pane cannot be activated from its current state.');
     await this.tmux.option('p', pane.runtimeId, '@ts-ready', pane.token);
   }
+  private async setDescription(scope: 's' | 'w', target: string, description: string): Promise<void> {
+    const key = scope === 's' ? '@ts-session-description' : '@ts-window-description';
+    if (description) await this.tmux.option(scope, target, key, description);
+    else await this.tmux.call(['set-option', ...(scope === 's' ? [] : ['-w']), '-qu', '-t', target, key]);
+  }
   private async createPane(session: DesiredSession, window: DesiredWindow, pane: DesiredPane, scope: 'session' | 'window' | 'pane', target: string, generation: string, activate = true): Promise<string> {
     const launch = encodeLaunch({ socket: this.tmux.socket, session: session.id, window: window.id, pane: pane.id, scope, spec: pane.spec, token: randomUUID(), generation });
     const common = ['-d', '-P', '-F', '#{pane_id}', '-c', literalFormat(pane.spec.cwd)];
@@ -49,9 +54,14 @@ export class Manager {
     const first = await this.createPane(session, window, window.panes[0]!, scope, target, generation, false);
     const pending = [first];
     const wid = await this.tmux.call(['display-message', '-p', '-t', first, '#{window_id}']);
+    if (scope === 'session') {
+      const sid = await this.tmux.call(['display-message', '-p', '-t', first, '#{session_id}']);
+      await this.setDescription('s', sid, session.description ?? '');
+    }
     for (const pane of window.panes.slice(1)) pending.push(await this.createPane(session, window, pane, 'pane', wid, generation, false));
     await this.tmux.call(['select-layout', '-t', wid, window.layout]);
     await this.tmux.option('w', wid, '@ts-layout', window.layout);
+    await this.setDescription('w', wid, window.description ?? '');
     await this.tmux.option('w', wid, '@ts-initialized', '1');
     for (const pid of pending) await this.tmux.option('p', pid, '@ts-ready', await this.tmux.getOption(pid, '@ts-token'));
   }
@@ -75,6 +85,8 @@ export class Manager {
       case 'create-pane': await this.createPane(session, window!, window!.panes.find(p => p.id === pid)!, 'pane', w!.runtimeId, generation, w!.initialized); break;
       case 'rename-session': await this.tmux.call(['rename-session', '-t', a!.runtimeId, await this.tmux.renameValue(session.name)]); break;
       case 'rename-window': await this.tmux.call(['rename-window', '-t', w!.runtimeId, await this.tmux.renameValue(window!.name)]); break;
+      case 'session-description': await this.setDescription('s', a!.runtimeId, session.description ?? ''); break;
+      case 'window-description': await this.setDescription('w', w!.runtimeId, window!.description ?? ''); break;
       case 'profile':
         await this.tmux.option('s', a!.runtimeId, 'status', session.profile === 'immersive' ? 'off' : 'on');
         await this.tmux.option('s', a!.runtimeId, '@ts-profile', session.profile); break;

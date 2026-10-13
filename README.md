@@ -12,9 +12,6 @@ separate controller daemon; sticky panes have a small Node.js supervisor process
 Requires **Node.js 24+**, **tmux 3.3+**, and **flock** from util-linux on the remote
 Linux host. Windows users connect through SSH, or run the CLI inside WSL.
 
-The npm package is prepared for publication but **has not been published yet**.
-After publication:
-
 ```sh
 npm install --global @rezics/termspaces
 termspaces doctor
@@ -25,7 +22,7 @@ termspaces apply
 termspaces attach default
 ```
 
-Before publication, build from source and run `node dist/cli.js` in place of
+For an unreleased version, build from source and run `node dist/cli.js` in place of
 `termspaces`. See [development](docs/development/toolchain.md).
 
 ## Define a workspace
@@ -39,6 +36,7 @@ version: 1
 session:
   id: project
   name: Project
+  description: Project development, agent work, tests and service operations.
   cwd: ~/projects/my-project
   autostart: true
   profile: minimal
@@ -46,6 +44,7 @@ session:
 windows:
   - id: agents
     name: Agents
+    description: Terminals for manually started development and review agents.
     layout: even-horizontal
     panes:
       - id: main
@@ -91,6 +90,20 @@ shells do not retain a previous shell's variables or working-directory changes.
 The [generated JSON Schema](schema/workspace.schema.json) also ships in the npm
 package; `termspaces schema` prints it without needing a tmux server.
 
+Available since **0.2.0**, session and window `description` fields record intended use for people and
+agents. They are optional, support multiline Unicode text up to 4096 characters,
+and reject terminal control characters other than tabs and line breaks. Omitted
+or empty descriptions appear as `""` in runtime output. `list`, `status`, and
+`windows` expose descriptions in both human output and the JSON protocol.
+
+Editing a description is a metadata update: `plan` shows `session-description`
+or `window-description` operations and their new `value`; `apply` updates them
+without replacing panes, replaying startup commands, or changing layout. Remove
+the field or set it to an empty string to clear the stored description.
+Descriptions belong to their own resource and do not inherit from parents.
+They describe intended purpose, not current availability, task progress or
+authorization to run commands.
+
 ## Apply semantics
 
 | Change | Behavior |
@@ -98,6 +111,7 @@ package; `termspaces schema` prints it without needing a tmux server.
 | Add a session/window/pane | Create the missing resource |
 | Apply again | Keep existing resources and startup attempts |
 | Change a display name or profile | Update in place |
+| Add, edit or remove a description | Update metadata in place |
 | Change an existing startup command, cwd, shell or sticky option | Report deferred drift; keep the running pane |
 | Remove a definition | Keep the runtime resource and report it |
 | Change the declared layout | Report drift; use `layout` explicitly |
