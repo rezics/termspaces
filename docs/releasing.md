@@ -15,7 +15,8 @@ task pack
 ```
 
 Inspect the tarball in `.temp/`. It should contain compiled JavaScript and
-declarations, the tmux preset, JSON Schema, Agent Skill, README and license.
+declarations, the tmux preset, JSON Schema, Agent Skill, linked documentation,
+README and license.
 It must exclude reference clones, test data, credentials and source checkouts.
 Install that tarball into a fresh prefix and check its `termspaces` command.
 

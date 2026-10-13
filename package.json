@@ -6,7 +6,7 @@
   "bin": { "termspaces": "dist/cli.js" },
   "exports": { ".": "./dist/index.js", "./schema": "./schema/workspace.schema.json" },
   "types": "./dist/index.d.ts",
-  "files": ["dist", "assets", "schema", "skills", "README.md", "LICENSE"],
+  "files": ["dist", "assets", "schema", "skills", "docs", "README.md", "LICENSE"],
   "engines": { "node": ">=24" },
   "packageManager": "yarn@1.22.22",
   "repository": { "type": "git", "url": "git+https://github.com/rezics/termspaces.git" },
