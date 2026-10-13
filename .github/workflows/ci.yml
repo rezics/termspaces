@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
+        tmux: [3.3a, 3.5a, 3.7c]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ matrix.node }}'
+      - uses: arduino/setup-task@v2
+        with:
+          version: '3.53.1'
+      - name: Install native build dependencies
+        run: task exec -- sudo apt-get update
+      - run: task exec -- sudo apt-get install --yes build-essential libevent-dev libncurses-dev bison
+      - run: task install
+      - run: task ci:tmux -- '${{ matrix.tmux }}'
+      - name: Select tmux release
+        run: echo "$PWD/.temp/tmux-${{ matrix.tmux }}/bin" >> "$GITHUB_PATH"
+      - run: task check
+      - run: task test
+      - run: task docs:check
+      - run: task package:smoke

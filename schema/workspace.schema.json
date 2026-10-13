@@ -1,0 +1,222 @@
+{
+  "additionalProperties": false,
+  "$id": "https://rezics.github.io/termspaces/workspace.schema.json",
+  "title": "Termspaces workspace",
+  "type": "object",
+  "required": [
+    "version",
+    "session",
+    "windows"
+  ],
+  "properties": {
+    "version": {
+      "const": 1,
+      "type": "number"
+    },
+    "session": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "cwd"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^.:\\u0000-\\u001f\\u007f]+$",
+          "type": "string"
+        },
+        "cwd": {
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "type": "string"
+        },
+        "autostart": {
+          "type": "boolean"
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "const": "minimal",
+              "type": "string"
+            },
+            {
+              "const": "immersive",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "windows": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "panes"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+            "type": "string"
+          },
+          "cwd": {
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+            "type": "string"
+          },
+          "startup": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "manual",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "mode",
+                  "argv"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "on-create",
+                    "type": "string"
+                  },
+                  "argv": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "pattern": "^[^\\u0000]*$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "const": "even-horizontal",
+                "type": "string"
+              },
+              {
+                "const": "even-vertical",
+                "type": "string"
+              },
+              {
+                "const": "main-horizontal",
+                "type": "string"
+              },
+              {
+                "const": "main-vertical",
+                "type": "string"
+              },
+              {
+                "const": "tiled",
+                "type": "string"
+              }
+            ]
+          },
+          "panes": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$",
+                  "type": "string"
+                },
+                "cwd": {
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+                  "type": "string"
+                },
+                "sticky": {
+                  "type": "boolean"
+                },
+                "shell": {
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+                  "type": "string"
+                },
+                "startup": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "mode"
+                      ],
+                      "properties": {
+                        "mode": {
+                          "const": "manual",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "mode",
+                        "argv"
+                      ],
+                      "properties": {
+                        "mode": {
+                          "const": "on-create",
+                          "type": "string"
+                        },
+                        "argv": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "pattern": "^[^\\u0000]*$",
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

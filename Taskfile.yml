@@ -1,0 +1,40 @@
+version: '3'
+
+tasks:
+  default:
+    cmds: [task --list]
+  exec:
+    desc: Run a development command (arguments after --).
+    cmds: ['{{.CLI_ARGS}}']
+  install:
+    desc: Install pinned dependencies.
+    cmds: [yarn install --frozen-lockfile]
+  build:
+    desc: Compile TypeScript and generate the configuration schema.
+    cmds: [node scripts/clean-build.mjs, node node_modules/typescript/bin/tsc, node dist/schema.js]
+  check:
+    desc: Type-check the project.
+    cmds: [node node_modules/typescript/bin/tsc --noEmit]
+  test:
+    desc: Build and run unit and isolated tmux integration tests.
+    deps: [build]
+    cmds: ['node --test {{.CLI_ARGS | default "test/*.test.mjs"}}']
+  pack:
+    desc: Build and prepare an npm tarball without publishing.
+    deps: [build]
+    cmds: [mkdir -p .temp, npm pack --pack-destination .temp]
+  test:systemd:
+    desc: Exercise generated units against the current user manager on isolated names.
+    deps: [build]
+    env: { TERMSPACES_SYSTEMD_TEST: '1' }
+    cmds: [node --test test/systemd.test.mjs]
+  docs:check:
+    desc: Check local Markdown file references.
+    cmds: [node scripts/check-docs.mjs]
+  ci:tmux:
+    desc: Build a selected tmux release into .temp for compatibility checks.
+    cmds: ['sh scripts/build-tmux.sh {{.CLI_ARGS}}']
+  package:smoke:
+    desc: Pack, install into a clean local prefix and exercise the shipped CLI.
+    deps: [pack]
+    cmds: [node scripts/package-smoke.mjs]

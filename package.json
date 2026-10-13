@@ -1,0 +1,24 @@
+{
+  "name": "@rezics/termspaces",
+  "version": "0.1.0",
+  "description": "Declarative tmux workspaces for humans and coding agents",
+  "type": "module",
+  "bin": { "termspaces": "dist/cli.js" },
+  "exports": { ".": "./dist/index.js", "./schema": "./schema/workspace.schema.json" },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "assets", "schema", "skills", "README.md", "LICENSE"],
+  "engines": { "node": ">=24" },
+  "packageManager": "yarn@1.22.22",
+  "repository": { "type": "git", "url": "git+https://github.com/rezics/termspaces.git" },
+  "homepage": "https://github.com/rezics/termspaces#readme",
+  "bugs": "https://github.com/rezics/termspaces/issues",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "dependencies": {
+    "@sinclair/typebox": "0.34.52",
+    "ajv": "8.20.0",
+    "commander": "15.0.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": { "@types/node": "24.19.2", "typescript": "5.9.3" }
+}
